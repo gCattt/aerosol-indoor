@@ -1,0 +1,114 @@
+I2C Driver
+
+1.
+BUS seriale, sincrono, half-duplex che permette la co-esistenza di più masters e slaves
+
+La sua struttura rende il BUS I2C ideale per la comunicazione di dispositivi vicini tra di loro.
+
+
+L'ESP32 ha 2 controller I2C, chiamati anche PORTS
+	   ognuno di questi due può fare sia da master che da slave
+
+
+3.
+1) CONFIGURAZIONE:
+	per farla bisogna sistemare parametri all'interno di una struttura dati, di tipo 'i2c_config_t' : 
+		- modalità di operazione: master o slave
+		- i pin da utilizzare per la comunicazione: quali fanno da linea dati e quali da linea di clock (ed eventualmente abilitare i resistori interni)
+		- (se stiamo parlando del MASTER) la frequenza del clock
+		- (se stiamo parlando dello SLAVE) l'indirizzo dello slave
+
+	una volta che la struttura è stata sistemata bisogna richiamare la funzione 'i2c_param_config()' alla quale bisogna passare:
+		- il port number
+		- la struttura dati appena creata
+
+	in questo modo andiamo ad ultimare la configurazione rendendola effettiva
+
+
+<esempio configurazione master>
+<esempio configurazione slave>
+
+
+6.
+2) INSTALLAZIONE:
+	eseguita dalla funzione 'i2c_driver_install()' con i seguenti parametri:
+		- port number
+		- modalità di operazione: master o slave
+		- (se stiamo parlando dello SLAVE) la dimensione del buffer di memoria in cui verranno allocati i dati ricevuti/inviati dal/al master
+		  (se stiamo parlando del MASTER) altrimenti vanno disabilitati
+		- flag per allocare l'interrupt
+
+<esempio>
+
+
+7.
+3) COMUNICAZIONE MASTER
+	una volta configurati i dispositivi ed installato il driver...
+	...l'ESP32 a questo punto è pronto per comunicare con gli altri devices
+	
+	Per una migliore organizzazione bisogna creare un contenitore chiamato 'command link' in cui si costruisce il pacchetto che il master dovrà inviare allo slave
+	verrà popolato quindi con la sequenza di comandi che il master dovrà inviare
+
+<esempio WRITE (master --> slave)>
+<esempio READ (slave --> master)>	
+
+
+12.
+3) COMUNICAZIONE SLAVE
+
+	- i2c_salve_read_buffer():
+		quando il master invia dati allo slave, quest'ultimo conserva le informazioni ricevute nel buffer di ricezioneù
+		
+		1. inserisco all'interno del buffer di ricezione le informazioni che il master invia
+		2. recupero le informazioni tramite la funzione
+
+	- i2c_slave_write_buffer():
+		all'interno del buffer di invio vengono inserite informazioni che in un qualsiasi momento il master potrebbe richiedere
+		
+		1. carico il buffer di trasmissione, quindi, tramite tale funzione
+		2. invio le informazioni al master quando le richiede
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

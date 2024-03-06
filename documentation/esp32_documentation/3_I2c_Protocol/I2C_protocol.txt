@@ -1,0 +1,116 @@
+#--- I2C ('iquadroc') --> IIC (Inter Integrated Circuit) ---#
+
+1.
+protocollo per far parlare tra di loro dispositivi integrati utilizzato, quindi, a basso livello
+
+2.
+ARCHITETTURA:
+	
+	BUS SERIALE SINCRONO
+
+	i dispositivi condividono:
+		- dati --> linea SDA
+		- clock --> linea del CLOCK
+		- riferimento di tensione (nei disegni non è rappresentato)
+
+	i dispositivi che si collegano al bus possono avere 2 RUOLI DIVERSI:
+		- MASTER --> CONTROLLA IL CLOCK, da il segnale di sincronismo
+			     COMINCIA LA COMUNICAZIONE
+			     ( solitamente UNICO, ma l'architettura prevede anche la possibilità di avere più master in grado di controllare il clock )
+
+		- SLAVE  --> si limita a RICEVERE ED INVIARE DATI quando viene chiamato in causa
+			     ognuno ha il suo INDIRIZZO UNIVOCO per essere richiamato
+
+3.
+CONNESSIONE ELETTRICA:
+
+	LINEE BIDIREZIONALI
+	
+	i dispositivi che si collegano a queste linee presentano una sorta di INTERRUTTORE
+	ci vogliono quindi delle RESISTENZE DI PULL-UP SULLE LINEE, in modo da tenerle NORMALMENTE a LIVELLO ALTO
+
+	nella configurazione dell'I2C bisogna specificare l'utilizzo di resistenze di pull-up
+
+	il LIVELLO DI TENSIONE può essere sia 3,3V che 5V
+
+	le FREQUENZE DEL CLOCK permettono una velocità fino a 3MHz ( solitamente 100kHz )
+
+4.
+COMUNICAZIONE:
+	
+	inizialmente una CONDIZIONE DI START avviata dal master								( S )
+	il MASTER TRASMETTE L'INDIRIZZO DELLO SLAVE a 7 bit (2^7)							( SLAVE ADDRESS )
+	il MASTER TRASMETTE UN ULTERIORE BIT per definire la modalità di lavoro: LETTURA (1) o SCRITTURA (0)
+	lo SLAVE RISPONDE CON UN A (...cknowledge)									( A )
+	il MASTER INIZIA LA TRASMISSIONE DEI DATI, di 8 bit ognuno							( DATA )
+	lo SLAVE RISPONDE CON UN A (...cknowledge)									( A )
+	fino a quando lo slave risponde A va tutto bene... 								( DATA, A, DATA, A ... )
+	...se lo SLAVE INVIA UN notA significa che c'è un PROBLEMA perciò il master 'dichiare' una CONDIZIONE DI STOP	
+	il MASTER conclude la trasmissione con una CONDIZIONE DI STOP							( P )
+	
+	in uno operazione di lettura avvengono esattamente le operazioni inverse
+
+	ad ogni impulso di clock viene trasmesso o inviato un bit
+
+5.
+CONDIZIONE DI START E STOP
+
+	- CONDIZIONE DI START
+
+		il master...
+		
+		- come primo passaggio, la linea SDA viene TIRATA GIU'
+		- successivamente, la linea del CLOCK viene TIRATA GIU'
+
+		il Clock quindi sarà sempre basso e ritornerà alto solo quando deve leggere i bit
+
+	- CONDIZIONE DI STOP
+		
+		il master...
+		
+		- come primo passaggio, la LINEA DI CLOCK VIENE RIMESSA ALTA
+		- successivamente, LA LINEA SDA RITORNA ALTA
+
+		entrambe le linee TORNANO QUINDI NELLA CONDIZIONE DI RIPOSO
+
+6.
+TRASMISSIONE DEI BIT
+
+	indipendendentemente da chi trasmette e riceve...
+
+	- La LINEA SDA PUO' CAMBIARE (passare da 0 a 1 o viceversa ) SOLO QUANDO LA LINEA DI CLOCK E' BASSA
+	- La LINEA SDA DEVE ESSERE STABILMENTE A 0 o 1 QUANDO LA LINEA DI CLOCK E' ALTA, in modo tale da essere letta correttamente
+
+
+7.
+ACK / NACK
+
+	- ACK:
+		A = 0 (SDA LOW)
+
+	- NACK
+		notA = 1 (SDA HIGH)
+
+	dopo la trasmissione degli 8 bit di un dato, SUL BIT SUCCESSIVO il master o lo slave invieranno UN BIT DI ACK O NACK
+
+	
+		
+		
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+	
+	

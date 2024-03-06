@@ -1,0 +1,140 @@
+GPIO and Interrupts
+
+1
+/
+
+2
+40 piedini i/o generici
+usati come i/o digitali
+ognuno di loro può essere utilizzato come i/o digitale o essere associato ad altre periferiche interne
+si fa riferimento ad un pin tramite un pin progressivo (non più tramite port)
+i piedini da 6 a 11 sono utilizzati per altri scopi
+	34 -> 39 solo input
+Per poter utilizzare le funzionalità i/o dobbiamo aver incluso le API contenute nella libreria
+
+3
+definire la direzione: input, output o bidirezionale (leggo e comando)
+per stabilire la modalità si utilizza la funzione
+	gpio_set_direction(gpio_num t gpio_num, gpio_num_t gpio_mode)
+		i due parametri che riceve sono:
+			gpio_num: piedino del quale vogliamo fare la configurazione
+			gpio_mode: stabilisce la configurazione che sto assegnando al pin
+					la imposto tramite delle costanti
+		restituisce un valore di tipo 'esp_err_t':
+			ESP_OK: Success
+			ESP_ERR_INVALID_ARG GPIO: Error
+
+
+4
+stabilita la direzione del piedino posso utilizzarlo:
+	assegno un valore (output) --> gpio_set_level(...)
+		specifico il piedino che voglio controllare ed il valore che voglio assegnargli
+	leggo il valore (input) --> gpio_get_level(...)
+		specifico solo il pin che voglio leggere
+		i valori che restituisce sono:
+			0
+			1
+
+5
+posso configurare anche resistenze di pull-up e pull-down
+	gpio_set_pull_mode(...)
+		passo il numero di pin ed il tipo di resistore che gli voglio assegnare
+
+			tra .....: pull-up
+			tra piedino e massa: pull-down
+			
+			la modalità è scelta sempre tramite le costanti
+
+		la resistenza va poi abilitata, non solo scelta
+
+6
+è possibile anche configurare più pin contemporaneamente tramite la funzione:
+	gpio_config(...)
+		ha un unico parametro: un puntatore ad una struttura (struct)	
+				       che ha diversi campi
+						una maschera in cui metto alti i piedini che voglio configurare
+						mode: definisco la modalità di lavoro
+						tipologia di resistenza
+						tipologia di interrupt che volgio gestire
+
+		dichiaro una variabile che come tipologia ha quella struttura
+	es:
+		gpio_config_t IO_config;
+		IO_config.pin_bit_mask = ((1ULL<<GPIO_NUM_6) | (1ULL<<GPIO_NUM_8));
+					   1 Unsigned Long Long = 64 bit (MSB = 1 il resto 0)
+					   << shift verso a sinistra di 6 (GPIO_NUM_6) | ....8
+					   facendo l'or avrò una mask con 2 bit a 1, in posizione 6 e 8
+in questo modo posso fare tutto in una volta
+
+7
+evento asincrono che normalmente quindi richiede la predisposizione di configurazioni in grado di gestirlo
+serve per verificare eventi a livello hardware
+l'evento viene segnalato ed il sistema esegue una funzione apposita per gestirlo(ISR)
+ISR software viene messa allo stesso livello di importanza dell'hardware --> !!! PRIORITà ASSOLUTA SU QUALSIASI ALTRO TASK
+le funzioni di programmazione (API) non possono essere utilizzate all'interno dell'ISR, hanno quindi una versione apposita per essere eseguite nell'isr
+per poter eseguire un ISR bisogna decidere l'evento da monitorare:
+	gpio_set_intr_type(...)
+		numero di pin e tipologia di evento:
+				identificata da diverse costanti:
+					disabled
+					positive e negative edge
+					any edge
+					high o low level
+
+8
+isr funzione di callback che viene richiamata quando si verifica un interruzione
+la ISR ha sempre la priorità più alta di un qualsiasi altro task che lo scheduler sta gestendo
+quando scriviamo una ISR bisogna utilizzare le versioni delle funzioni apposite per le ISR
+
+configurazione interrupt:
+9
+definisco il tipo di interruzione:
+	gpio_set_intr_type(<numero_piedino>, <tipologia_interrput)
+
+10
+abilito l'interrupt su un particolare piedino:
+	gpio_install_isr_service   -> agisce su un singolo piedino alla volta
+	gpio_isr_register -> agisce contemporaneamente su tutti i piedini
+
+11
+devo associare all'interruzione la corrispondente ISR
+	gpio_isr_handler_add(<piedino_ISR>, <nome_ISR>, <puntatore_void_per_passare_un_argomento>)
+							NULL -> non passo nessun parametro
+
+12
+le ISR normalmente devono essere molto brevi, perchè mantiene bloccato tutto il resto quando è in esecuzione
+le operazioni più grandi devono essere demandate ad un task
+
+13
+il meccanismo di lavoro quando c'è un'interruzione:
+il primo task viene eseguito per una determinata time slice e poi viene sospeso
+si verifica l'interruzione perciò sospendo tutto e la eseguo.
+se l'isr demanda alcune operazioni ad altri task, quest'ultimi avranno priorità maggiore rispetto al primo task
+una volta terminata l'ISR lo scheduler riprende l'esecuzione del task iniziale
+
+14
+ogni volta bisogna valutare situazione per situazione
+se infatti sono poche le istruzioni che una ISR deve eseguire le posso inserire all'interno di quest'ultima
+
+
+15
+per fare in modo che il task demandato dalla isr venga eseguito rapidamente si utilizza un oggetto:
+	semaforo binario 
+	qualcuno può attivarlo e disattivarlo, mentre l'atro può solo aspettare
+	il task sta in attesa che l'isr attivi il semaforo
+
+16
+funzionamento del semaforo binario
+
+17
+creo un oggetto semaforo:
+	xSemaphoreCreateBinary()
+
+	xSemaphoreTake() -> ISR da il semaforo ad un task
+
+18
+sblocca chi sta aspettando il semaforo:
+	xSemaphoreGiveFromISR
+
+19 - 20 - 21
+<esercizio>
